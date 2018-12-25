@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "lib": ["es6", "dom"],
+    "module": "commonjs",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitUseStrict": true,
+    "noUnusedLocals": true,
+    "outDir": "./out",
+    "sourceMap": false,
+    "strictNullChecks": true,
+    "inlineSourceMap": false,
+    "inlineSources": false,
+    "target": "es5"
+  },
+  "include": ["./*.ts"]
+}

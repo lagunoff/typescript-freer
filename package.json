@@ -1,0 +1,14 @@
+{
+  "name": "typescript-freer",
+  "version": "0.1.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "cd tests && ./node_modules/.bin/mocha -r ts-node/register ??-*.ts"
+  },
+  "optionalDependencies": {
+    "burrido": "^1.0.8"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}
