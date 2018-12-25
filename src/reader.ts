@@ -6,7 +6,7 @@ export class Ask<I> {
   readonly __tag__ask__: void;
 }
 
-export function runReader<I>(ctx: I): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Ask<I>>, A> {
+export function runReader<I>(read: () => I): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Ask<I>>, A> {
   return eff => {
     if (eff instanceof Pure) {
       return eff as any;
@@ -14,14 +14,14 @@ export function runReader<I>(ctx: I): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, A
     
     if (eff instanceof Impure) {
       if (eff._value instanceof Ask) {
-        return Eff.of(ctx);
+        return Eff.of(read());
       }
       return eff;
     }
     
     if (eff instanceof Chain) {
-      const first = runReader(ctx)(eff.first);
-      return first.chain(a => runReader(ctx)(eff.andThen(a)));
+      const first = runReader(read)(eff.first);
+      return first.chain(a => runReader(read)(eff.andThen(a)));
     }
     
     return absurd(eff);
