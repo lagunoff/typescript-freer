@@ -14,7 +14,7 @@ export type AsyncEffect<A> = Eff<Async, A>;
 
 export type Canceller = () => void;
 export type Consumer<A> = (x: A) => void;
-export type Subscribe<A> = (cb: Consumer<A>, completed: () => void) => Canceller;
+export type Subscribe<A> = (next: Consumer<A>, completed: () => void) => Canceller;
 
 
 export function runAsync<A>(effect: Eff<Async|IO, A>): Subscribe<A> {

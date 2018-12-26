@@ -13,7 +13,11 @@ const eff01 = Eff.Do(function *() {
 });
 
 let state = 2;
-const eff02 = runState(() => state, next => (state = next), proj => (state = proj(state)))(eff01); // Eliminating `State` from list of effects
+const getter = () => state;
+const setter = next => (state = next);
+const modify = proj => (state = proj(state));
+
+const eff02 = runState(getter, setter, modify)(eff01); // Eliminate `State` from `U` parameter
 console.log(state); // => 2
 const result = runEff(eff02); // Here side-effects are being executed
 console.log(result); // => Done
