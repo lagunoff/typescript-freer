@@ -92,7 +92,7 @@ how it's done in typescript using this library.
 
 ## Examples
 
-Imitating global state [ [01-state.ts](./examples/01-state.ts) ]
+Imitating global state [ [01-state.ts](./examples/01-state.ts) | [demo](https://lagunoff.github.io/typescript-freer/01-state/) ]
 ```ts
 const eff01 = Eff.Do(function *() {
   const current: State = yield State.get();
@@ -108,7 +108,7 @@ console.log(result); // => Done
 console.log(state); // => 9
 ```
 
-Error handling [ [02-failure.ts](./examples/02-failure.ts) ]
+Error handling [ [02-failure.ts](./examples/02-failure.ts) | [demo](https://lagunoff.github.io/typescript-freer/02-failure/) ]
 ```ts
 const div = (num: number, denom: number) => Eff.Do(function *() {
   if (denom === 0) yield Failure.create<Err>('Division by zero');
@@ -124,7 +124,7 @@ const result02 = runEff(eff02); // Here side-effects are being executed
 console.log(result02); // => Left { value: "Division by zero" }
 ```
 
-Asynchronous computations [ [03-async.ts](./examples/03-async.ts) ]
+Asynchronous computations [ [03-async.ts](./examples/03-async.ts) | [demo](https://lagunoff.github.io/typescript-freer/03-async/) ]
 ```ts
 const eff01 = Eff.Do(function *() {
   const first: number[] = yield randomOrgInts(1, 0, 10);
@@ -138,7 +138,7 @@ const subscribe = runAsync(eff02); // Eliminate `Async` from `U` parameter
 subscribe(console.log, () => console.log('completed'));
 ```
 
-Console interactions [ [04-console.ts](./examples/04-console.ts) ]
+Console interactions [ [04-console.ts](./examples/04-console.ts) | [demo](https://lagunoff.github.io/typescript-freer/04-console/) ]
 ```ts
 const interaction = Eff.Do(function *() {
   const first: number = yield ask(num)('Enter the first number: ');
