@@ -49,7 +49,7 @@ export function runAsync<A>(effect: Eff<Async|IO, A>): Subscribe<A> {
       const handleEffect = (e: EffAny) => {
         cancellers.set(e, null);
         const _onNext = result => {
-          if (e === effect.first) handleEffect(effect.andThen(result));
+          if (e === effect._first) handleEffect(effect._andThen(result));
           else onNext(result);
         };
         const _onComplete = () => {
@@ -61,7 +61,7 @@ export function runAsync<A>(effect: Eff<Async|IO, A>): Subscribe<A> {
         if (cancellers.has(e)) cancellers.set(e, canceller);
       };
 
-      handleEffect(effect.first);
+      handleEffect(effect._first);
       if (cancellers.size === 0) return noopFunc;
       
       return () => cancellers.forEach(canceller => canceller && canceller());

@@ -53,8 +53,8 @@ export function runState<S>(get: () => S, set: (x: S) => void, modify: (proj: (x
     }
     
     if (effect instanceof Chain) {
-      const first = runState(get, set, modify)(effect.first);
-      return first.chain(a => runState(get, set, modify)(effect.andThen(a)));
+      const first = runState(get, set, modify)(effect._first);
+      return first.chain(a => runState(get, set, modify)(effect._andThen(a)));
     }
     
     return absurd(effect);

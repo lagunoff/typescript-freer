@@ -28,9 +28,9 @@ export function runFailure<E, A, U>(eff: Eff<Failure<E>|U, A>): Eff<Exclude<U, F
   }
   
   if (eff instanceof Chain) {
-    const first = runFailure(eff.first);
+    const first = runFailure(eff._first);
     // @ts-ignore
-    return new Chain(first, ethr => ethr.fold(() => Eff.of(ethr), val => runFailure(eff.andThen(val))));
+    return new Chain(first, ethr => ethr.fold(() => Eff.of(ethr), val => runFailure(eff._andThen(val))));
   }
   
   return absurd(eff);

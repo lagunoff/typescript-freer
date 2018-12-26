@@ -3,7 +3,6 @@ import { absurd } from './types';
 
 export class Ask<I> {
   readonly _A: I;
-  readonly __tag__ask__: void;
 }
 
 export function runReader<I>(read: () => I): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Ask<I>>, A> {
@@ -20,8 +19,8 @@ export function runReader<I>(read: () => I): <U, A>(eff: Eff<U, A>) => Eff<Exclu
     }
     
     if (eff instanceof Chain) {
-      const first = runReader(read)(eff.first);
-      return first.chain(a => runReader(read)(eff.andThen(a)));
+      const first = runReader(read)(eff._first);
+      return first.chain(a => runReader(read)(eff._andThen(a)));
     }
     
     return absurd(eff);

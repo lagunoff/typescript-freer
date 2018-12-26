@@ -38,8 +38,8 @@ export function runConsoleGeneric(
     }
     
     if (effect instanceof Chain) {
-      const first = runConsoleGeneric(putStrLn_, getLine_)(effect.first);
-      return first.chain(a => runConsoleGeneric(putStrLn_, getLine_)(effect.andThen(a)));
+      const first = runConsoleGeneric(putStrLn_, getLine_)(effect._first);
+      return first.chain(a => runConsoleGeneric(putStrLn_, getLine_)(effect._andThen(a)));
     }
     
     return absurd(effect);

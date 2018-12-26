@@ -203,8 +203,8 @@ export function runHttp<U, A>(effect: Eff<U, A>): Eff<Exclude<U, Http>|Async, A>
   }
   
   if (effect instanceof Chain) {
-    const first = runHttp(effect.first);
-    return first.chain(a => runHttp(effect.andThen(a)));
+    const first = runHttp(effect._first);
+    return first.chain(a => runHttp(effect._andThen(a)));
   }
   
   return absurd(effect);

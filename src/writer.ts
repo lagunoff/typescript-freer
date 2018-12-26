@@ -23,8 +23,8 @@ export function runWriter<O>(cb: (out: O) => void): <U, A>(eff: Eff<U, A>) => Ef
     }
     
     if (effect instanceof Chain) {
-      const first = runWriter(cb)(effect.first);
-      return first.chain(a => runWriter(cb)(effect.andThen(a)));
+      const first = runWriter(cb)(effect._first);
+      return first.chain(a => runWriter(cb)(effect._andThen(a)));
     }
     
     return absurd(effect);

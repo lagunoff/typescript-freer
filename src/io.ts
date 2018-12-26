@@ -27,7 +27,7 @@ export function runIO<A>(eff: Eff<IO, A>): A {
   }
   
   if (eff instanceof Chain) {
-    return runIO(eff.andThen(runIO(eff.first)));
+    return runIO(eff._andThen(runIO(eff._first)));
   }
   
   return absurd(eff);

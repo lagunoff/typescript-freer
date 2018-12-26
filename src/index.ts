@@ -8,6 +8,7 @@ export type Eff<U, A> =
 ;
 export type EffAny = Eff<any, any>;
 
+
 export abstract class EffBase<U, A> {
   readonly _U: U;
   readonly _A: A;
@@ -35,7 +36,6 @@ export abstract class EffBase<U, A> {
 }
 
 
-
 export function of<A extends Expr>(value: A): Pure<never, A>;
 export function of<A>(value: A): Pure<never, A>;
 export function of<A>(value: A): Pure<never, A> {
@@ -59,7 +59,7 @@ export function runEff<A>(effect: Eff<never, A>): A {
   }
   
   if (effect instanceof Chain) {
-    return runEff(effect.andThen(runEff(effect.first)));
+    return runEff(effect._andThen(runEff(effect._first)));
   }
   
   return absurd(effect);  
@@ -89,8 +89,8 @@ export class Chain<U, A, X=any> extends EffBase<U, A> {
   readonly __tag__chain__: void;
   
   constructor(
-    readonly first: Eff<U, X>,
-    readonly andThen: (x: X) => Eff<U, A>,
+    readonly _first: Eff<U, X>,
+    readonly _andThen: (x: X) => Eff<U, A>,
   ) { super() }    
 }
 
