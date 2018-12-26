@@ -1,11 +1,13 @@
 Extensible Effects from
 [Freer Monads, More Extensible Effects](http://okmij.org/ftp/Haskell/extensible/more.pdf)
-in typescript. In short, Extensible Effects are a means to describe
-side effects in pure code in a composable manner.
+in typescript. 
 
 ## Explanation
-`Eff<U, A>` describes an effectful computation with the result type
-`A` and possible side-effects enumerated in a union type `U`.
+Extensible Effects are a means to describe side effects in pure code
+in a composable manner. `Eff<U, A>` describes an effectful computation
+with the result type `A` and possible side-effects listed in a union
+type `U`.
+
 ```ts
 export type Eff<U, A> = 
   | Pure<U, A>
@@ -15,11 +17,12 @@ export type Eff<U, A> =
 ```
 
 For example, `const eff: Eff<Console|State<number>, string>;` is a
-computation that produces the result of type `string`, also can make
-console interactions and manipulate global state along the way. `U` is
-a union of type-level effect labels constructed from labels of
-underlying effects combined using do-notation or directly through
-`chain` method.
+computation that produces the result of type `string`, but also can
+make console interactions and manipulate global state along the
+way. `U` is a type-level list of effect labels to which the
+computation has access to. This effects accumulate in typescript union
+type from lists of other effects when they compose using do-notation
+or through `chain` method.
 
 ```ts
 const eff = Eff.Do(function *() {
@@ -37,26 +40,52 @@ const eff = Console.question('Enter value for new state: ').chain(
 
 Effects from listings above don't perform side effects during
 construction and can be used in a pure code. In order to actually
-execute them and get the result of the computation, each kind of
-effects should provide function-evaluator or a handler for this
-particular effect. By convention these functions called with common
+execute them and to get the result of the computation, each kind of
+effect should provide function-evaluator or a «handler» for this
+particular effect. By convention these functions are named with common
 prefix `run*` (`runState`, `runReader`, `runWriter`, etc)
+
 ```ts
 function runReader<I>(read: () => I): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Ask<I>>, A>;
 ```
 
 This is the type of evaluator for label `Ask<I>`. If a caller provides
-a way do access global context `I`, then `runReader` return a function
-that receives effect of type Eff<U, A> and produces another effect
-without `Ask<I>` in `U`. All evaluators should eliminate corresponding
-effect labels from `U` maybe by adding another labels like does
-`runConsole` from [examples/console.ts](examples/console.ts):
+a way do access global context `I`, then `runReader` returns a
+function that receives effect of type Eff<U, A> and produces another
+effect without `Ask<I>` in `U`. All evaluators should eliminate
+corresponding effect labels from `U` possibly by introducing effects
+of different kind. For example `runConsole` from
+[examples/console.ts](examples/console.ts) replaces `Console` label by
+`Async` that stands for effects for asynchronous code:
 
 ```ts
 function runConsole<U, A>(effect: Eff<U, A>) => Eff<Exclude<U, Console>|Async, A>;
 ```
-Here effects with label `Console` replaced by label `Async` that stands
-for effects for asynchronous code. 
+
+Eventually, after calling corresponding evaluators for all effects,
+when there are no effects will be left in `U`, you can execute actual
+side-effects and access the result by calling `runEff: <A>(eff:
+Eff<never, A>) => A`.
+
+```ts
+declare const eff01: Eff<State, string>; 
+
+const eff02 = runState(getter, setter, modifier)(eff01); // eff02: Eff<never, string>
+const result = runEff(eff02); // result: string
+```
+
+Some evaluators instead of `Eff` may return some other type e.g. `runAsync`
+```ts
+function runAsync<A>(effect: Eff<Async, A>): Subscribe<A>;
+type Subscribe<A> = (next: (x: A) => void, completed: () => void) => Canceller;
+type Canceller = () => void;
+```
+Such evaluators just like `runEff` should be run after all others.
+
+This library is an experiment to check the possibility to write
+frontend applications in typescript, where most code is pure, and side
+effects are described declarativly by a data structure and an
+evaluator.
 
 
 ## Examples
@@ -70,8 +99,7 @@ const eff01 = Eff.Do(function *() {
   return 'Done';
 });
 
-let state = 2;
-const eff02 = runState(() => state, next => (state = next), proj => (state = proj(state)))(eff01);
+const eff02 = runState(getter, setter, modify)(eff01); // Eliminate `State` from `U` parameter
 console.log(state); // => 2
 const result = runEff(eff02); // Here side-effects are being executed
 console.log(result); // => Done
@@ -80,9 +108,10 @@ console.log(state); // => 9
 
 Error handling [ [02-failure.ts](./examples/02-failure.ts) ]
 ```ts
-const div = (num: number, denom: number) => Eff.Do(function *() { if
-(denom === 0) yield Failure.create<Err>('Division by zero'); return
-num / denom; });
+const div = (num: number, denom: number) => Eff.Do(function *() {
+  if (denom === 0) yield Failure.create<Err>('Division by zero');
+  return num / denom;
+});
 
 const eff01 = runFailure(div(10, 5)); // Eliminate `Failure` from `U` parameter
 const result01 = runEff(eff01); // Here side-effects are being executed

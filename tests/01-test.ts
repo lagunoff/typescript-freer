@@ -34,6 +34,8 @@ const effectArb = jsc.oneof([
   jsc.record({ tag: arb.of('Pure'), value: primitiveArb }),
   arb.of<EffectRep>({ tag: 'Get' }),
   jsc.record({ tag: arb.of('Set'), value: primitiveArb }),
+  arb.of<EffectRep>({ tag: 'Ask' }),
+  jsc.record({ tag: arb.of('Put'), value: primitiveArb }),
   jsc.record({ tag: arb.of('Modify'), func: jsc.fn(primitiveArb) }),
   jsc.record({ tag: arb.of('Async'), value: primitiveArb, eager: jsc.bool }),
   jsc.record({ tag: arb.of('IO'), value: primitiveArb }),
@@ -41,7 +43,7 @@ const effectArb = jsc.oneof([
     tag: arb.of('Failure'),
     value: jsc.either(primitiveArb, primitiveArb).smap(
       e => e.either<any>(Either.failure, Either.of),
-      e => e.fold(left, right)
+      e => e.fold(left, right),
     )
   }),
 ]);
@@ -90,7 +92,7 @@ export function pprintEffect(rep: EffectRep): string {
 }
 
 export function pprintEffects(reps: EffectRep[]): string {
-  return 'Eff.Do(function *() {\n' + reps.map(r => '  yield ' + pprintEffect(r) + ';').join('\n') + '\n})\n';
+  return 'Eff.Do(function *() {\n' + reps.map(r => '  yield ' + pprintEffect(r) + ';').join('\n') + '\n})';
 }
 
 const options: any = { tests: 100, quiet: false };
@@ -160,12 +162,14 @@ describe('Eff', () => {
 
       return new Promise((resolve) => eff06(
         ethr => {
+          if (options.verbose) console.log('// =>', ethr);
           // Result should be an instance of `EitherBase`, because we did `runFailure`
           expect(ethr).instanceof(EitherBase);
           // Compare with the calculated value
           const calculated = calculateResult(ctx, initialState, xs);
           expect(ethr).to.deep.equal(calculated.result);
           expect(output).to.deep.equal(calculated.output);
+          if (options.verbose) console.log();
         },
         () => resolve(true)
       ));
