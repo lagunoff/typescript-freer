@@ -3,6 +3,7 @@ import * as http from './http';
 import '../src/burrido';
 import { runFailure } from '../src/failure';
 import { runAsync } from '../src/async';
+import { runHttp } from './http';
 
 // https://api.random.org/json-rpc/1/basic
 function randomOrgInts(n: number, min: number, max: number): http.HttpEffect<number[]> {
@@ -25,5 +26,6 @@ const eff01 = Eff.Do(function *() {
 });
 
 const eff02 = runFailure(eff01); // Eliminate `Failure` from `U` parameter
-const subscribe = runAsync(eff02); // Eliminate `Async` from `U` parameter
+const eff03 = runHttp(eff02); // Eliminate `Http` from `U` parameter
+const subscribe = runAsync(eff03); // Eliminate `Async` from `U` parameter
 subscribe(console.log, () => console.log('completed'));

@@ -1,7 +1,8 @@
-import { Async, ToAsync, Observable, Canceller, AsyncEffect } from '../src/async';
+import { Async, Subscribe } from '../src/async';
 import { Either } from '../src/either';
 import { Failure } from '../src/failure';
-import { Impure, Eff } from '../src/index';
+import { Impure, Eff, Pure, Chain } from '../src/index';
+import { absurd } from '../src/types';
 
 
 // HTTP method
@@ -40,12 +41,12 @@ export interface Response {
 export type ParamsPrimitive = number|string|undefined|null;
 export type Params = Record<string, ParamsPrimitive|ParamsPrimitive[]>;
 
-export type HttpEffect<A> = Eff<Async|Failure<HttpError>, A>;
+export type HttpEffect<A> = Eff<Http|Failure<HttpError>, A>;
 
 
 /** General effect construtor */
-export function sendE(req: Request): AsyncEffect<Either<HttpError, Response>>  {
-  return new Impure(new HttpToAsync(req));
+export function sendE(req: Request): Eff<Http, Either<HttpError, Response>>  {
+  return new Impure(new Http(req));
 }
 
 
@@ -60,7 +61,7 @@ export function get(url: string, request?: Omit<Request, 'url'|'method'>): HttpE
   return send({ ...request, method: 'GET', url });
 }
 
-export function getE(url: string, request?: Omit<Request, 'url'|'method'>): AsyncEffect<Either<HttpError, Response>> {
+export function getE(url: string, request?: Omit<Request, 'url'|'method'>): Eff<Http, Either<HttpError, Response>> {
   return sendE({ ...request, method: 'GET', url });
 }
 
@@ -70,7 +71,7 @@ export function post(url: string, body: Request['body'], request?: Omit<Request,
   return send({ ...request, method: 'POST', url, body });
 }
 
-export function postE(url: string, body: Request['body'], request?: Omit<Request, 'url'|'method'|'body'>): AsyncEffect<Either<HttpError, Response>> {
+export function postE(url: string, body: Request['body'], request?: Omit<Request, 'url'|'method'|'body'>): Eff<Http, Either<HttpError, Response>> {
   return sendE({ ...request, method: 'POST', url, body });
 }
 
@@ -78,42 +79,44 @@ export function postE(url: string, body: Request['body'], request?: Omit<Request
 /**
  * Do actual request
  */
-export function doXHR(req: Request, onNext: (x: Either<HttpError, Response>) => void, onComplete: () => void): Canceller {
-  const onSuccess = (x: Response) => (onNext(Either.right(x)), onComplete());
-  const onFailure = (x: HttpError) => (onNext(Either.left(x)), onComplete());
-  
-  const xhr = new XMLHttpRequest();
-  xhr.addEventListener('error', () => onFailure({ tag: 'NetworkError' }));
-  xhr.addEventListener('timeout', () => onFailure({ tag: 'Timeout' }));
-  xhr.addEventListener('load', () => onSuccess({
-    url: xhr.responseURL,
-    status: xhr.status,
-    statusText: xhr.statusText,
-    headers: parseHeaders(xhr.getAllResponseHeaders()),
-    body: xhr.response || xhr.responseText,
-  }));
-  try {
-    xhr.open(req.method, req.url, true);
-  } catch (e) {
-    onFailure({ tag: 'BadUrl', desc: req.url });
-  }
-
-  // if ('progress' in req && req.progress) {
-  //   xhr.addEventListener('progress', e => onProgress(e.lengthComputable ? { tag: 'Computable', loaded: e.loaded, total: e.total } : { tag: 'Uncomputable' }));
-  // }
-  if (req.timeout) xhr.timeout = req.timeout;
-  if (typeof (req.withCredentials) !== 'undefined') xhr.withCredentials = req.withCredentials;
-  if (typeof (req.headers) !== 'undefined') {
-    for (let key in req.headers) {
-      if (!req.headers.hasOwnProperty(key)) continue;
-      const value = req.headers[key];
-      if (typeof(value) !== 'undefined' && value !== null)
-        xhr.setRequestHeader(key, String(value));
+export function doXHR(req: Request): Subscribe<Either<HttpError, Response>> {
+  return (onNext, onComplete) => {
+    const onSuccess = (x: Response) => (onNext(Either.right(x)), onComplete());
+    const onFailure = (x: HttpError) => (onNext(Either.left(x)), onComplete());
+    
+    const xhr = new XMLHttpRequest();
+    xhr.addEventListener('error', () => onFailure({ tag: 'NetworkError' }));
+    xhr.addEventListener('timeout', () => onFailure({ tag: 'Timeout' }));
+    xhr.addEventListener('load', () => onSuccess({
+      url: xhr.responseURL,
+      status: xhr.status,
+      statusText: xhr.statusText,
+      headers: parseHeaders(xhr.getAllResponseHeaders()),
+      body: xhr.response || xhr.responseText,
+    }));
+    try {
+      xhr.open(req.method, req.url, true);
+    } catch (e) {
+      onFailure({ tag: 'BadUrl', desc: req.url });
     }
-  }
-  const body = Object.prototype.toString.apply(req.body) === '[object Object]' ? JSON.stringify(req.body) : req.body;
-  xhr.send(body);
-  return () => xhr.abort();
+
+    // if ('progress' in req && req.progress) {
+    //   xhr.addEventListener('progress', e => onProgress(e.lengthComputable ? { tag: 'Computable', loaded: e.loaded, total: e.total } : { tag: 'Uncomputable' }));
+    // }
+    if (req.timeout) xhr.timeout = req.timeout;
+    if (typeof (req.withCredentials) !== 'undefined') xhr.withCredentials = req.withCredentials;
+    if (typeof (req.headers) !== 'undefined') {
+      for (let key in req.headers) {
+        if (!req.headers.hasOwnProperty(key)) continue;
+        const value = req.headers[key];
+        if (typeof(value) !== 'undefined' && value !== null)
+          xhr.setRequestHeader(key, String(value));
+      }
+    }
+    const body = Object.prototype.toString.apply(req.body) === '[object Object]' ? JSON.stringify(req.body) : req.body;
+    xhr.send(body);
+    return () => xhr.abort();
+  };
 }
 
 
@@ -178,17 +181,34 @@ export function join(...args: Array<string|Params>): string {
 }
 
 
-// Distinct effect instead of constructing `Observable` right away, so
-// we can inspect `request` later on
-export class HttpToAsync extends ToAsync<Either<HttpError, Response>> {
+export class Http {
+  readonly _A: Either<HttpError, Response>;
+  
   constructor(
     readonly request: Request,
-  ) { super(); };
-
-  toAsync() {
-    return new Observable<Either<HttpError, Response>>((onNext, onComplete) => doXHR(this.request, onNext, onComplete));
-  }
+  ) {};
 }
+
+
+export function runHttp<U, A>(effect: Eff<U, A>): Eff<Exclude<U, Http>|Async, A> {
+  if (effect instanceof Pure) {
+    return effect.castU();
+  }
+  
+  if (effect instanceof Impure) {
+    if (effect._value instanceof Http) {
+      return Async.create<any>(doXHR(effect._value.request));
+    }
+    return effect as any;
+  }
+  
+  if (effect instanceof Chain) {
+    const first = runHttp(effect.first);
+    return first.chain(a => runHttp(effect.andThen(a)));
+  }
+  
+  return absurd(effect);
+};  
 
 
 // Helper
