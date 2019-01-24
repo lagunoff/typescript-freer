@@ -1,7 +1,7 @@
-import { Eff, Impure, Pure, Chain } from './index';
+import { Eff, Pure, Chain, Eff, toEffBase } from './index';
 import { absurd } from './types';
 
-export class Ask<I> {
+export class Ask<I> extends Eff<Ask<I>, I> {
   readonly _A: I;
   readonly __tag__ask__: void;
 }
@@ -12,24 +12,20 @@ export function runReader<I>(read: () => I): <U, A>(eff: Eff<U, A>) => Eff<Exclu
       return eff as any;
     }
     
-    if (eff instanceof Impure) {
-      if (eff._value instanceof Ask) {
-        return Eff.of(read());
-      }
-      return eff;
-    }
-    
     if (eff instanceof Chain) {
-      const first = runReader(read)(eff.first);
-      return first.chain(a => runReader(read)(eff.andThen(a)));
+      const first = runReader(read)(eff._first);
+      return toEffBase(first).chain(a => runReader(read)(eff._then(a)));
     }
     
-    return absurd(eff);
+    if (eff instanceof Ask) {
+      return Eff.of(read());
+    }
+    return eff;
   }
 }
 
 function ask<I>(): Eff<Ask<I>, I> {
-  return new Impure(new Ask());
+  return new Ask();
 }
 
 export interface Statics {

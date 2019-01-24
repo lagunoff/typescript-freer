@@ -10,5 +10,7 @@
     "burrido": "^1.0.8"
   },
   "devDependencies": {},
-  "dependencies": {}
+  "dependencies": {
+    "typescript": "^3.3.0-dev.20190112"
+  }
 }

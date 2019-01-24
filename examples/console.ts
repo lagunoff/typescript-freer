@@ -1,5 +1,5 @@
-import { Eff, Impure, Pure, Chain } from '../src/index';
-import { absurd } from '../src/types';
+import { Eff, Pure, Chain, toEffBase } from '../src/index';
+import { ensure } from '../src/types';
 import { Subscribe, Async } from '../src/async';
 
 
@@ -7,42 +7,41 @@ export type Console = PutStrLn|GetLine;
 
 
 function putStrLn(line: string): Eff<Console, void> {
-  return Eff.impure(new PutStrLn(line));
+  return new PutStrLn(line);
 }
 
 function getLine(): Eff<Console, string> {
-  return Eff.impure(new GetLine(''));
+  return new GetLine('');
 }
 
 function question(question: string): Eff<Console, string> {
-  return Eff.impure(new GetLine(question));
+  return new GetLine(question);
 }
 
 export function runConsoleGeneric(
   putStrLn_: (x: string) => Subscribe<void>,
   getLine_: (question: string) => Subscribe<string>,
 ): <U, A>(effect: Eff<U, A>) => Eff<Exclude<U, Console>|Async, A> {  
-  return effect => {
+  return <U, A>(effect: Eff<U, A>) => {
     if (effect instanceof Pure) {
       return effect.castU();
     }
     
-    if (effect instanceof Impure) {
-      if (effect._value instanceof PutStrLn) {
-        return Async.create(putStrLn_(effect._value._line));
-      }
-      if (effect._value instanceof GetLine) {
-        return Async.create(getLine_(effect._value._question));
-      }
-      return effect;
-    }
-    
     if (effect instanceof Chain) {
-      const first = runConsoleGeneric(putStrLn_, getLine_)(effect.first);
-      return first.chain(a => runConsoleGeneric(putStrLn_, getLine_)(effect.andThen(a)));
+      const first = runConsoleGeneric(putStrLn_, getLine_)(effect._first);
+      return toEffBase(first).chain(a => runConsoleGeneric(putStrLn_, getLine_)(effect._then(a)));
+    }
+
+    if (effect instanceof PutStrLn) {
+      return Async.create(putStrLn_(effect._line));
     }
     
-    return absurd(effect);
+    if (effect instanceof GetLine) {
+      return Async.create(getLine_(effect._question));
+    }
+
+    ensure<U>(effect);
+    return effect as any;
   };
 }
 

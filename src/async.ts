@@ -1,4 +1,4 @@
-import { Eff, Impure, Pure, Chain, EffAny } from './index';
+import { Eff, Pure, Chain, EffAny, Eff } from './index';
 import { IO } from './io';
 import { Failure } from './failure';
 import { Either } from './either';
@@ -9,7 +9,6 @@ export type Async<A = any> =
   | Observable<A>
   | ToAsync<A>
 ;
-export type AsyncEffect<A> = Eff<Async, A>;
 
 
 export type Canceller = () => void;
@@ -25,31 +24,13 @@ export function runAsync<A>(effect: Eff<Async|IO, A>): Subscribe<A> {
       return noopFunc;
     }
     
-    if (effect instanceof Impure) {
-      if (effect._value instanceof Observable) {
-        return effect._value._subscribe(onNext, onComplete);
-      }
-      
-      if (effect._value instanceof ToAsync) {
-        return runAsync(new Impure(effect._value.toAsync()))(onNext, onComplete);
-      }
-     
-      if (effect._value instanceof IO) {
-        onNext(effect._value._io());
-        onComplete();
-        return noopFunc;
-      }
-      
-      return absurd(effect._value);
-    }
-    
     if (effect instanceof Chain) {
       const cancellers = new Map<EffAny, Canceller|null>();
       
       const handleEffect = (e: EffAny) => {
         cancellers.set(e, null);
         const _onNext = result => {
-          if (e === effect.first) handleEffect(effect.andThen(result));
+          if (e === effect._first) handleEffect(effect._then(result));
           else onNext(result);
         };
         const _onComplete = () => {
@@ -61,21 +42,35 @@ export function runAsync<A>(effect: Eff<Async|IO, A>): Subscribe<A> {
         if (cancellers.has(e)) cancellers.set(e, canceller);
       };
 
-      handleEffect(effect.first);
+      handleEffect(effect._first);
       if (cancellers.size === 0) return noopFunc;
       
       return () => cancellers.forEach(canceller => canceller && canceller());
+    }
+    
+    if (effect instanceof Observable) {
+      return effect._subscribe(onNext, onComplete);
+    }
+    
+    if (effect instanceof ToAsync) {
+      return runAsync(effect.toAsync())(onNext, onComplete);
+    }
+    
+    if (effect instanceof IO) {
+      onNext(effect._io());
+      onComplete();
+      return noopFunc;
     }
     
     return absurd(effect);
   };
 }
 
-function create<A>(subscribe: Subscribe<A>): Eff<Observable, A> {
-  return new Impure(new Observable(subscribe));
+function create<A>(subscribe: Subscribe<A>): Eff<Async, A> {
+  return new Observable(subscribe);
 }
 
-function createE<L, R>(subscribe: Subscribe<Either<L, R>>): Eff<Failure<L>|Observable, R> {
+function createE<L, R>(subscribe: Subscribe<Either<L, R>>): Eff<Failure<L>|Async, R> {
   return create(subscribe).handleError();
 }
 
@@ -89,18 +84,17 @@ export namespace Subscribe {
   }
 }
 
-export class Observable<A = any> {
+export class Observable<A = any> extends Eff<Async, A> {
   readonly _A: A;
   
   constructor(
     readonly _subscribe: Subscribe<A>,
-  ) {}
+  ) { super(); }
 }
 
-export abstract class ToAsync<A> {
+export abstract class ToAsync<A = any> extends Eff<Async, A> {
   readonly _A: A;
   abstract toAsync(): Async<A>;
-
 }
 export interface Statics {
   createE: typeof createE;

@@ -1,105 +1,117 @@
 import { Expr, absurd } from './types';
 
 
-export type Eff<U, A> = 
-  | Pure<U, A>
-  | Impure<U, A>
-  | Chain<U, A>
-;
-export type EffAny = Eff<any, any>;
+interface URI2HKT<U, L, A> {
+}
 
-export abstract class EffBase<U, A> {
-  readonly _U: U;
+type TC1<A = any> = URI2HKT<any, any, A>[keyof URI2HKT<any, any, A>];
+type TC2<L = any, A = any> = URI2HKT<any, L, A>[keyof URI2HKT<any, L, A>];
+type TC3<U = any, L = any, A = any> = URI2HKT<U, L, A>[keyof URI2HKT<U, L, A>];
+
+type URI = keyof URI2HKT<any, any, any>;
+
+type T1<U extends URI, A> = URI2HKT<any, any, A>[U];
+type T2<U extends URI, L, A> = URI2HKT<any, L, A>[U];
+type T3<U extends URI, Z, L, A> = URI2HKT<Z, L, A>[U];
+
+
+type TA<T, A>
+  // @ts-ignore
+  = T extends { _URI: infer U; _L: infer L; } ? URI2HKT<any, L, A>[U]
+  // @ts-ignore
+  : T extends { _URI: infer U; } ? URI2HKT<any, any, A>[U]
+  : never
+;
+
+type T01 = TA<Get<number, Date>, string>;
+type T02 = TA<Pure<0>, string>;
+type T03 = TA<T01|Chain<78>, string>;
+
+
+// export type Eff<U extends URIS|URIS2|URIS3|URIS4, A> =
+//   | Type<U, A>
+// ;
+
+
+export abstract class Eff<A> {
   readonly _A: A;
+  // readonly _L: any;
+  // readonly _U: never;
   
-  map<B>(proj: (x: A) => B): Eff<U, B> {
-    //    return new Apply([this as any as FreerAny], proj);
+  map<B, T>(this: T, proj: (x: A) => B): TA<T, B>|Chain<B> {
+    // @ts-ignore
     return this.chain(x => of(proj(x)));
   }
 
-  mapTo<B>(value: B): Eff<U, B> {
+  mapTo<B, T extends TC1>(this: T, value: B) {
     return this.chainTo(of(value));
   }
 
-  chain<B>(f: (x: A) => Eff<U, B>): Eff<U, B>;
-  chain<B, U2>(f: (x: A) => Eff<U2, B>): Eff<U|U2, B>;
-  chain<B>(f: (x: A) => Eff<U, B>): Eff<U, B> {
-    return new Chain(this as any, f);
-  }  
-
-  chainTo<B>(value: Eff<U, B>): Eff<U, B>;
-  chainTo<B, U2>(value: Eff<U2, B>): Eff<U|U2, B>;
-  chainTo<B>(value: Eff<U, B>): Eff<U, B> {
+  chain<T, TB extends TC1>(this: T, then: (x: A) => TB): TA<T, TB['_A']>|TB|Chain<TB['_A']> {
+    return new Chain(this as any, then);
+  }
+  
+  chainTo<T, TB extends TC1>(this: T, value: TB): TA<T, TB['_A']>|TB|Chain<TB['_A']> {
     return new Chain(this as any, () => value);
   }
 }
 
 
-
-export function of<A extends Expr>(value: A): Pure<never, A>;
-export function of<A>(value: A): Pure<never, A>;
-export function of<A>(value: A): Pure<never, A> {
+export function of<A extends Expr>(value: A): Pure<A>;
+export function of<A>(value: A): Pure<A>;
+export function of<A>(value: A): Pure<A> {
   return new Pure(value);
 }
 
 
-// @ts-ignore
-export function impure<M>(value: M): Impure<M, M['_A']> {
-  return new Impure(value);
-}
-
-
-export function runEff<A>(effect: Eff<never, A>): A {
-  if (effect instanceof Pure) {
-    return effect._value;
-  }
-  
-  if (effect instanceof Impure) {
-    return absurd(effect._value);
-  }
-  
-  if (effect instanceof Chain) {
-    return runEff(effect.andThen(runEff(effect.first)));
-  }
-  
-  return absurd(effect);  
-}
-
-export class Pure<U, A> extends EffBase<U, A> {
-  readonly __tag__pure__: void;
+export class Pure<A> extends Eff<A> {
+  readonly _URI: 'Pure';
   
   constructor(
     readonly _value: A,
   ) { super() }
-
-  castU<U2>(): Pure<U2, A> {
-    return this as any;
-  }
 }
 
-export class Impure<U, A> extends EffBase<U, A> {  
-  readonly __tag__impure__: void;
-  
-  constructor(
-    readonly _value: U,
-  ) { super() }  
+export class Get<S, A> extends Eff<A> {
+  readonly _URI: 'Get';
+  readonly _L: S;
 }
 
-export class Chain<U, A, X=any> extends EffBase<U, A> {  
-  readonly __tag__chain__: void;
+export class Set<S, A> extends Eff<A> {
+  readonly _URI: 'Get';
+  readonly _L: S;
   
   constructor(
-    readonly first: Eff<U, X>,
-    readonly andThen: (x: X) => Eff<U, A>,
+    readonly _value: S,
+  ) { super() }
+}
+
+export class Chain<A> extends Eff<A> {  
+  readonly _URI: 'Chain';
+  
+  constructor(
+    readonly _first: TC1<unknown>,
+    readonly _then: (x: unknown) => TC1<A>,
   ) { super() }    
+}
+
+
+interface URI2HKT<U, L, A> {
+  Pure: Pure<A>;
+  Chain: Chain<A>;
+  Get: Get<L, A>;
+  Set: Set<L, A>;
 }
 
 export interface Statics {
   of: typeof of;
-  impure: typeof impure;
   Pure: typeof Pure;
 }
 
-export const Eff = {
-  of, Pure, impure,
-} as Statics;
+
+const x00 = new Pure(1);
+const x01 = new Pure(10).map(String);
+const x02 = x01
+  .chain(x => new Pure(true))
+  .chain(x => new Get<number, Date>())
+  .chain(x => new Set<Date, string>(new Date()))

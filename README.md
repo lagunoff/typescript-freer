@@ -81,7 +81,7 @@ type Canceller = () => void;
 ```
 Such evaluators just like `runEff` should be run after all others.
 
-So, effects are just a data structure that describes them and
+So, effects are just a data structures that describes them and
 evaluators are the way to handle these effects inside `Eff`. This
 library contains definitions for most common side effects but in pure
 programming languages where this approch is originated, it's
