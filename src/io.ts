@@ -1,8 +1,8 @@
-import { Eff, Impure, Pure, Chain } from './index';
+import { Eff, Pure, Chain, Eff } from './index';
 import { absurd } from './types';
 
 
-export class IO<A = any> {
+export class IO<A = any> extends Eff<IO, A> {
   static runIO = runIO;
   static create = create;
   
@@ -10,26 +10,31 @@ export class IO<A = any> {
   
   constructor(
     readonly _io: () => A,
-  ) {}
+  ) { super(); }
 }
 
 function create<A>(io: () => A): Eff<IO, A> {
-  return Eff.impure(new IO(io));
+  return new IO(io);
 }
 
-export function runIO<A>(eff: Eff<IO, A>): A {
+export function runIO<A>(eff: Eff<IO, A>): A {   
   if (eff instanceof Pure) {
     return eff._value;
   }
  
-  if (eff instanceof Impure) {
-    return eff._value._io();
+  if (eff instanceof Chain) {
+    return runIO(eff._then(runIO(eff._first)));
   }
   
-  if (eff instanceof Chain) {
-    return runIO(eff.andThen(runIO(eff.first)));
+  if (eff instanceof IO) {
+    return eff._io();
   }
   
   return absurd(eff);
 }
 
+const runIO2: <A>(eff: Eff<IO, A>) => A = eff =>
+  eff instanceof Pure ? eff._value
+  : eff instanceof Chain ? runIO(eff._then(runIO(eff._first)))
+  : eff instanceof IO ? eff._io()
+  : absurd(eff);

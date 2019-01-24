@@ -1,7 +1,7 @@
-import { Async, ToAsync, Observable, Canceller, AsyncEffect } from '../src/async';
+import { Async, ToAsync, Observable, Canceller } from '../src/async';
 import { Either } from '../src/either';
 import { Failure } from '../src/failure';
-import { Impure, Eff } from '../src/index';
+import { Eff } from '../src/index';
 
 
 // HTTP method
@@ -44,8 +44,8 @@ export type HttpEffect<A> = Eff<Async|Failure<HttpError>, A>;
 
 
 /** General effect construtor */
-export function sendE(req: Request): AsyncEffect<Either<HttpError, Response>>  {
-  return new Impure(new HttpToAsync(req));
+export function sendE(req: Request): Eff<Async, Either<HttpError, Response>>  {
+  return new HttpToAsync(req);
 }
 
 
@@ -60,7 +60,7 @@ export function get(url: string, request?: Omit<Request, 'url'|'method'>): HttpE
   return send({ ...request, method: 'GET', url });
 }
 
-export function getE(url: string, request?: Omit<Request, 'url'|'method'>): AsyncEffect<Either<HttpError, Response>> {
+export function getE(url: string, request?: Omit<Request, 'url'|'method'>): Eff<Async, Either<HttpError, Response>> {
   return sendE({ ...request, method: 'GET', url });
 }
 
@@ -70,7 +70,7 @@ export function post(url: string, body: Request['body'], request?: Omit<Request,
   return send({ ...request, method: 'POST', url, body });
 }
 
-export function postE(url: string, body: Request['body'], request?: Omit<Request, 'url'|'method'|'body'>): AsyncEffect<Either<HttpError, Response>> {
+export function postE(url: string, body: Request['body'], request?: Omit<Request, 'url'|'method'|'body'>): Eff<Async, Either<HttpError, Response>> {
   return sendE({ ...request, method: 'POST', url, body });
 }
 

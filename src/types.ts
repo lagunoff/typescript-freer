@@ -9,6 +9,8 @@ export function literal<A extends string>(x: A): A {
 
 
 /** Helper for totality checking */
+export function absurd(x: never): any;
+export function absurd<A>(x: never): A;
 export function absurd(x: never): any {
   throw new Error('absurd: unreachable code');
 }

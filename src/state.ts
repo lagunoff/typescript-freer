@@ -1,4 +1,4 @@
-import { Eff, Impure, Pure, Chain } from './index';
+import { Eff, Pure, Chain, Eff, toEffBase } from './index';
 import { absurd } from './types';
 
 
@@ -6,20 +6,19 @@ export type State<S> = Get<S>|Set<S>|Modify<S>;
 
  
 function modify<S>(proj: (x: S) => S): Eff<Modify<S>, void> {
-  return Eff.impure(new Modify(proj));
+  return new Modify(proj);
 }
 
 function patch<S>(patch: Partial<S>): Eff<Modify<S>, void> {
-  // @ts-ignore
-  return Eff.impure(new Modify(x => ({ ...x, ...patch })));
+  return new Modify(x => ({ ...x, ...patch }));
 }
 
 export function get<I>(): Eff<Get<I>, I> {
-  return Eff.impure(new Get());
+  return new Get();
 }
 
 export function set<Out>(out: Out): Eff<Set<Out>, void> {
-  return Eff.impure(new Set(out));
+  return new Set(out);
 }
 
 export function bindState<S>() {
@@ -37,27 +36,26 @@ export function runState<S>(get: () => S, set: (x: S) => void, modify: (proj: (x
       return effect as any;
     }
     
-    if (effect instanceof Impure) {
-      if (effect._value instanceof Get) {
-        return Eff.of(get());
-      }
-      if (effect._value instanceof Set) {
-        set(effect._value._value);
-        return Eff.of(void 0);
-      }
-      if (effect._value instanceof Modify) {
-        modify(effect._value._proj);
-        return Eff.of(void 0);
-      }
-      return effect;
-    }
-    
     if (effect instanceof Chain) {
-      const first = runState(get, set, modify)(effect.first);
-      return first.chain(a => runState(get, set, modify)(effect.andThen(a)));
+      const first = runState(get, set, modify)(effect._first);
+      return toEffBase(first).chain(a => runState(get, set, modify)(effect._then(a)));
     }
     
-    return absurd(effect);
+    if (effect instanceof Get) {
+      return Eff.of(get());
+    }
+    
+    if (effect instanceof Set) {
+      set(effect._value);
+      return Eff.of(void 0);
+    }
+    
+    if (effect instanceof Modify) {
+      modify(effect._proj);
+      return Eff.of(void 0);
+    }    
+    
+    return effect;
   }
 }
 
@@ -74,21 +72,21 @@ export const State = {
 } as Statics;
 
 
-export class Get<S> {
+export class Get<S> extends Eff<Get<S>, S> {
   readonly _A: S;
 }
 
-export class Set<S> {
+export class Set<S> extends Eff<Set<S>, void> {
   readonly _A: void;
   constructor(
     readonly _value: S,
-  ) {}
+  ) { super(); }
 }
 
-export class Modify<S> {
+export class Modify<S> extends Eff<Modify<S>, void> {
   readonly _A: void;
   constructor(
     readonly _proj: (x: S) => S,
-  ) {}
+  ) { super(); }
 }
 

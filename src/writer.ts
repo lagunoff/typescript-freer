@@ -1,11 +1,11 @@
-import { Eff, Impure, Pure, Chain } from './index';
+import { Eff, Pure, Chain, Eff, toEffBase } from './index';
 import { absurd } from './types';
 
-export class Put<Out> {
+export class Put<Out> extends Eff<Put<Out>, void> {
   readonly _A: void;
   constructor(
     readonly _out: Out,
-  ) {}
+  ) { super(); }
 }
 
 export function runWriter<O>(cb: (out: O) => void): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Put<O>>, A> {
@@ -14,25 +14,22 @@ export function runWriter<O>(cb: (out: O) => void): <U, A>(eff: Eff<U, A>) => Ef
       return effect as any;
     }
     
-    if (effect instanceof Impure) {
-      if (effect._value instanceof Put) {
-        cb(effect._value._out);
-        return Eff.of(void 0);
-      }
-      return effect;
-    }
-    
     if (effect instanceof Chain) {
-      const first = runWriter(cb)(effect.first);
-      return first.chain(a => runWriter(cb)(effect.andThen(a)));
+      const first = runWriter(cb)(effect._first);
+      return toEffBase(first).chain(a => runWriter(cb)(effect._then(a)));
     }
     
-    return absurd(effect);
+    if (effect instanceof Put) {
+      cb(effect._out);
+      return Eff.of(void 0);
+    }
+    
+    return effect;
   }
 }
 
 export function put<Out>(out: Out): Eff<Put<Out>, void> {
-  return Eff.impure(new Put(out));
+  return new Put(out);
 }
 
 export interface Statics {
