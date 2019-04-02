@@ -1,11 +1,9 @@
-import { Eff, Impure, Pure, Chain } from './index';
-import { absurd } from './types';
+import { InterpreterResult, skip } from './index';
 
 
-export class IO<A = any> {
+export class IO<A> {
   static runIO = runIO;
   static create = create;
-  
   readonly _A: A;
   
   constructor(
@@ -13,23 +11,14 @@ export class IO<A = any> {
   ) {}
 }
 
-function create<A>(io: () => A): Eff<IO, A> {
-  return Eff.impure(new IO(io));
+function create<A>(io: () => A): IO<A> {
+  return new IO(io);
 }
 
-export function runIO<A>(eff: Eff<IO, A>): A {
-  if (eff instanceof Pure) {
-    return eff._value;
+export function runIO<A>(effect: any): InterpreterResult<A> {
+  if (effect instanceof IO) {
+    return effect._io();
   }
- 
-  if (eff instanceof Impure) {
-    return eff._value._io();
-  }
-  
-  if (eff instanceof Chain) {
-    return runIO(eff.andThen(runIO(eff.first)));
-  }
-  
-  return absurd(eff);
+  return skip;
 }
 

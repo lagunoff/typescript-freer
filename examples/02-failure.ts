@@ -1,5 +1,5 @@
 import { Eff, runEff } from '../src/index';
-import { Failure, runFailure } from '../src/failure';
+import { Failure, runFailure } from '../src/either';
 import '../src/burrido';
 
 type Err = string;

@@ -1,6 +1,6 @@
 import { Async, ToAsync, Observable, Canceller, AsyncEffect } from '../src/async';
 import { Either } from '../src/either';
-import { Failure } from '../src/failure';
+import { Failure } from '../src/either';
 import { Impure, Eff } from '../src/index';
 
 

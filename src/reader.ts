@@ -1,42 +1,12 @@
-import { Eff, Impure, Pure, Chain } from './index';
-import { absurd } from './types';
+import { Interpreter, skip } from './index';
 
-export class Ask<I> {
-  readonly _A: I;
-  readonly __tag__ask__: void;
+export class Ask<A> {
+  readonly _A: A;
 }
 
-export function runReader<I>(ctx: I): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Ask<I>>, A> {
+export function runReader<A>(ask: () => A): Interpreter<A> {
   return eff => {
-    if (eff instanceof Pure) {
-      return eff as any;
-    }
-    
-    if (eff instanceof Impure) {
-      if (eff._value instanceof Ask) {
-        return Eff.of(ctx);
-      }
-      return eff;
-    }
-    
-    if (eff instanceof Chain) {
-      const first = runReader(ctx)(eff.first);
-      return first.chain(a => runReader(ctx)(eff.andThen(a)));
-    }
-    
-    return absurd(eff);
+    if (eff instanceof Ask) return ask();
+    return skip;
   }
 }
-
-function ask<I>(): Eff<Ask<I>, I> {
-  return new Impure(new Ask());
-}
-
-export interface Statics {
-  ask: typeof ask;
-  runReader: typeof runReader;
-}
-
-export const Reader = {
-  ask, runReader,
-} as Statics;

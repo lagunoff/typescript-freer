@@ -1,7 +1,7 @@
 import { Eff } from '../src/index';
 import * as http from './http';
 import '../src/burrido';
-import { runFailure } from '../src/failure';
+import { runFailure } from '../src/either';
 import { runAsync } from '../src/async';
 
 // https://api.random.org/json-rpc/1/basic

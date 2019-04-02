@@ -1,38 +1,24 @@
-import { Eff, Impure, Pure, Chain } from './index';
-import { absurd } from './types';
+import { skip, Interpreter } from './index';
 
-export class Put<Out> {
-  readonly _A: void;
+export class Put<A> {
+  readonly _A: A;
   constructor(
-    readonly _out: Out,
+    readonly _output: A,
   ) {}
 }
 
-export function runWriter<O>(cb: (out: O) => void): <U, A>(eff: Eff<U, A>) => Eff<Exclude<U, Put<O>>, A> {
+export function runWriter<A>(cb: (output: A) => void): Interpreter<void> {
   return effect => {
-    if (effect instanceof Pure) {
-      return effect as any;
+    if (effect instanceof Put) {
+      cb(effect._output);
+      return;
     }
-    
-    if (effect instanceof Impure) {
-      if (effect._value instanceof Put) {
-        cb(effect._value._out);
-        return Eff.of(void 0);
-      }
-      return effect;
-    }
-    
-    if (effect instanceof Chain) {
-      const first = runWriter(cb)(effect.first);
-      return first.chain(a => runWriter(cb)(effect.andThen(a)));
-    }
-    
-    return absurd(effect);
+    return skip;
   }
 }
 
-export function put<Out>(out: Out): Eff<Put<Out>, void> {
-  return Eff.impure(new Put(out));
+export function put<A>(output: A): Put<A> {
+  return new Put(output);
 }
 
 export interface Statics {

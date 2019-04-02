@@ -1,6 +1,6 @@
 import { Eff, Impure, Pure, Chain, EffAny } from './index';
 import { IO } from './io';
-import { Failure } from './failure';
+import { Failure } from './either';
 import { Either } from './either';
 import { absurd, Expr } from './types';
 
