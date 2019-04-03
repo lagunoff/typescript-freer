@@ -11,3 +11,8 @@ burrido@^1.0.8:
 immutagen@^1.0.0:
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/immutagen/-/immutagen-1.0.8.tgz#efc32eccab30a833496de43a4ea7aa4353e1097a"
+
+typescript@^3.4.1:
+  version "3.4.1"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.4.1.tgz#b6691be11a881ffa9a05765a205cb7383f3b63c6"
+  integrity sha512-3NSMb2VzDQm8oBTLH6Nj55VVtUEpe/rgkIzMir0qVoLyjDZlnMBva0U6vDiV3IH+sl/Yu6oP5QwsAQtHPmDd2Q==

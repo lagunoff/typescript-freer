@@ -55,7 +55,7 @@ export function runEffects<A>(iter: IterableIterator<A>, interp: Interpreter<A>,
       result.wait(a => {
         const nextEffect = iter.next(a);
         if (nextEffect.done) {
-          cb(a);
+          cb(nextEffect.value);
           return;
         }
         loop(cb)(interp(nextEffect.value));
@@ -72,7 +72,7 @@ export function runEffects<A>(iter: IterableIterator<A>, interp: Interpreter<A>,
     }
     const nextEffect = iter.next(result);
     if (nextEffect.done) {
-      cb(result);
+      cb(nextEffect.value);
       return;
     }
     loop(cb)(interp(nextEffect.value));
